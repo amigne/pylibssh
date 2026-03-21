@@ -38,6 +38,8 @@ OPTS_MAP = {
     "key_exchange_algorithms": libssh.SSH_OPTIONS_KEY_EXCHANGE,
     "publickey_accepted_algorithms": libssh.SSH_OPTIONS_PUBLICKEY_ACCEPTED_TYPES,
     "hostkeys": libssh.SSH_OPTIONS_HOSTKEYS,
+    "ciphers_c_s": libssh.SSH_OPTIONS_CIPHERS_C_S,
+    "ciphers_s_c": libssh.SSH_OPTIONS_CIPHERS_S_C,
     "gssapi_server_identity": libssh.SSH_OPTIONS_GSSAPI_SERVER_IDENTITY,
     "gssapi_client_identity": libssh.SSH_OPTIONS_GSSAPI_CLIENT_IDENTITY,
     "gssapi_delegate_credentials": libssh.SSH_OPTIONS_GSSAPI_DELEGATE_CREDENTIALS,
