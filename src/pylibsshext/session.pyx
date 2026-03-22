@@ -410,56 +410,117 @@ cdef class Session(object):
                                       self._fingerprint_py,
                                       know_host_msg)
 
-    def authenticate_specific_pubkey(
-            self,
-            bytes private_key_b64 not None,
-            private_key_password=None,
-    ):
-        """Authenticate this session using a private key.
+def authenticate_specific_pubkey(
+        self,
+        bytes private_key_b64 not None,
+        private_key_password=None,
+):
+    """Authenticate this session using a private key.
 
-        If a password is provided, it'll be used to decrypt the key.
+    If a password is provided, it'll be used to decrypt the key.
 
-        :param private_key_b64: A private key.
-        :type private_key_b64: bytes
+    :param private_key_b64: A private key.
+    :type private_key_b64: bytes
 
-        :param private_key_password: A password for the private key \
-                                     (if it's protected), defaults to \
-                                     no password.
-        :type private_key_password: bytes, optional
+    :param private_key_password: A password for the private key
+                                 (if it's protected), defaults to
+                                 no password.
+    :type private_key_password: bytes, optional
 
-        :raises LibsshSessionException: If authentication failed.
+    :raises LibsshSessionException: If authentication failed.
 
-        :return: Nothing.
-        :rtype: NoneType
-        """
-        cdef const char *c_private_key_b64 = private_key_b64
-        cdef bytes b_password
-        cdef const char *c_password = NULL
-        cdef libssh.ssh_key _private_key
-        cdef int rc
-        if private_key_password is not None:
-            if isinstance(private_key_password, bytes):
-                b_password = private_key_password
-            else:
-                b_password = private_key_password.encode()
-            c_password = b_password
-        libssh.ssh_pki_import_privkey_base64(
-            c_private_key_b64, c_password,
-            NULL, NULL,
-            &_private_key,
+    :return: Nothing.
+    :rtype: NoneType
+    """
+    cdef const char *c_private_key_b64 = private_key_b64
+    cdef bytes b_password
+    cdef const char *c_password = NULL
+    cdef libssh.ssh_key _private_key = NULL
+    cdef libssh.ssh_key _public_key = NULL
+    cdef int rc
+
+    if private_key_password is not None:
+        if isinstance(private_key_password, bytes):
+            b_password = private_key_password
+        else:
+            b_password = private_key_password.encode()
+        c_password = b_password
+
+    rc = libssh.ssh_pki_import_privkey_base64(
+        c_private_key_b64,
+        c_password,
+        NULL,
+        NULL,
+        &_private_key,
+    )
+	
+    if rc != libssh.SSH_OK or _private_key == NULL:
+        raise LibsshSessionException(
+            "Failed to import specific private key: {!s} (RC={!r})".format(
+                self._get_session_error_str(), rc
+            )
         )
 
+    try:
+        rc = libssh.ssh_pki_export_privkey_to_pubkey(_private_key, &_public_key)
+        if rc != libssh.SSH_OK or _public_key == NULL:
+            raise LibsshSessionException(
+                "Failed to derive public key from private key: {!s} (RC={!r})".format(
+                    self._get_session_error_str(), rc
+                )
+            )
+
+        # Step 1: offer the public key first
+        rc = libssh.ssh_userauth_try_publickey(
+            self._libssh_session,
+            NULL,
+            _public_key,
+        )
+
+        if rc == libssh.SSH_AUTH_DENIED:
+            raise LibsshSessionException(
+                "Server rejected offered public key: {!s} (RC={!r})".format(
+                    self._get_session_error_str(), rc
+                )
+            )
+        elif rc == libssh.SSH_AUTH_ERROR:
+            raise LibsshSessionException(
+                "Error while offering public key: {!s} (RC={!r})".format(
+                    self._get_session_error_str(), rc
+                )
+            )
+        elif rc == libssh.SSH_AUTH_PARTIAL:
+            raise LibsshSessionException(
+                "Partial authentication after offering public key: {!s} (RC={!r})".format(
+                    self._get_session_error_str(), rc
+                )
+            )
+        elif rc != libssh.SSH_AUTH_SUCCESS:
+            raise LibsshSessionException(
+                "Unexpected result while offering public key: {!s} (RC={!r})".format(
+                    self._get_session_error_str(), rc
+                )
+            )
+
+        # Step 2: sign/authenticate with the private key
         rc = libssh.ssh_userauth_publickey(
-            self._libssh_session, NULL, _private_key,
+            self._libssh_session,
+            NULL,
+            _private_key,
         )
 
         if rc != libssh.SSH_AUTH_SUCCESS:
             raise LibsshSessionException(
-                "Failed to authenticate a specific public key: "
-                "{!s} (RC={!r})".
-                format(self._get_session_error_str(), rc),
+                "Failed to authenticate a specific public key after accept: "
+                "{!s} (RC={!r})".format(
+                    self._get_session_error_str(), rc
+                )
             )
-        libssh.ssh_key_free(_private_key)
+    finally:
+        if _public_key != NULL:
+            libssh.ssh_key_free(_public_key)
+        if _private_key != NULL:
+            libssh.ssh_key_free(_private_key)
 
     def authenticate_pubkey(self):
         cdef int rc
