@@ -193,6 +193,8 @@ cdef extern from "libssh/libssh.h" nogil:
     int ssh_userauth_password(ssh_session session, const char *username, const char *password)
     int ssh_userauth_kbdint(ssh_session session, const char *username, const char *submethods)
     int ssh_userauth_gssapi(ssh_session session)
+    int ssh_userauth_try_publickey(ssh_session session, const char *username, ssh_key pubkey)
+    int ssh_pki_export_privkey_to_pubkey(ssh_key privkey, ssh_key *pkey)
     const char *ssh_userauth_kbdint_getinstruction(ssh_session session)
     const char *ssh_userauth_kbdint_getname(ssh_session session)
     int ssh_userauth_kbdint_getnprompts(ssh_session session)
