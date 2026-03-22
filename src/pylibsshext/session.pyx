@@ -40,6 +40,8 @@ OPTS_MAP = {
     "hostkeys": libssh.SSH_OPTIONS_HOSTKEYS,
     "ciphers_c_s": libssh.SSH_OPTIONS_CIPHERS_C_S,
     "ciphers_s_c": libssh.SSH_OPTIONS_CIPHERS_S_C,
+    "hmac_c_s": libssh.SSH_OPTIONS_HMAC_C_S,
+    "hmac_s_c": libssh.SSH_OPTIONS_HMAC_S_C,
     "gssapi_server_identity": libssh.SSH_OPTIONS_GSSAPI_SERVER_IDENTITY,
     "gssapi_client_identity": libssh.SSH_OPTIONS_GSSAPI_CLIENT_IDENTITY,
     "gssapi_delegate_credentials": libssh.SSH_OPTIONS_GSSAPI_DELEGATE_CREDENTIALS,
